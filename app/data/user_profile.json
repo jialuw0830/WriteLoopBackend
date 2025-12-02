@@ -1,0 +1,23 @@
+{
+  "logic_level": "Exceedingly poor logical reasoning with profound deficiencies in argumentation and identifying causal relationships.",
+  "logic_weak_points": [
+    "often omits thesis statements",
+    "frequently demonstrates false causal connections",
+    "forms binary oppositions instead of nuanced arguments"
+  ],
+  "vocabulary_level": "Extremely limited vocabulary, unable to express basic or complex ideas accurately.",
+  "vocabulary_weak_points": [
+    "overuses basic adjectives without context",
+    "unable to use precise vocabulary for detailed arguments"
+  ],
+  "grammar_level": "Very basic understanding of grammar that neither aids complexity nor clarity in sentence construction.",
+  "grammar_weak_points": [
+    "entirely simplistic sentence structures",
+    "struggles with syntactic complexity"
+  ],
+  "structure_level": "Consistently demonstrates a lack of structural coherence and paragraph organization.",
+  "structure_weak_points": [
+    "entire lack of paragraph structure",
+    "no use of transitions to guide readers"
+  ]
+}

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from app.services.suggest_service import generate_suggestions
 from app.services.rewrite_service import rewrite_sentence
-from app.services.logic_analysis_service import analyze_logic
+from app.services.logic_profile_service import analyze_logic_with_profile, generate_tasks_for_profile
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from typing import Optional, Any
@@ -33,6 +33,11 @@ class RewriteRequest(BaseModel):
 class LogicAnalysisRequest(BaseModel):
     text: str
 
+
+class TaskRequest(BaseModel):
+    # Latest article text, optional; tasks are mainly based on saved user_profile
+    text: str = ""
+
 def parse_json_response(result: str, default_key: str = "data"):
     """Parse JSON response with error handling."""
     try:
@@ -57,5 +62,17 @@ async def analyze_logic_endpoint(request: LogicAnalysisRequest):
     Logic analysis endpoint.
     Receives complete article content, uses GPT-4o to analyze logical flaws and provide improvement suggestions.
     """
-    result = analyze_logic(request.text)
+    # use enhanced logic analysis that also updates user profile
+    result = analyze_logic_with_profile(request.text)
     return parse_json_response(result)
+
+
+@app.post("/generate-tasks")
+async def generate_tasks_endpoint(request: TaskRequest):
+    """
+    Generate personalized practice tasks based on the current user profile.
+    Called only when user explicitly requests tasks.
+    """
+    result = generate_tasks_for_profile(request.text)
+    # this already returns {"tasks": [...]}
+    return parse_json_response(result, default_key="tasks")
