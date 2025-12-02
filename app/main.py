@@ -1,48 +1,61 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from pydantic import BaseModel
 from app.services.suggest_service import generate_suggestions
 from app.services.rewrite_service import rewrite_sentence
+from app.services.logic_analysis_service import analyze_logic
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from typing import Optional, Any  # ← 新增导入
+from typing import Optional, Any
 
 app = FastAPI()
 
-# CORS 设置
+# CORS configuration
 origins = [
-    "http://localhost:5173",  # Vue 前端的地址（你可以根据实际前端地址修改）
-    "http://127.0.0.1:8080",  # Vue 前端的地址
+    "http://localhost:5173",
+    "http://127.0.0.1:8080",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # 允许的源
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],  # 允许的 HTTP 方法
-    allow_headers=["*"],  # 允许的请求头
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
-
 
 class SuggestionRequest(BaseModel):
     text: str
-    cursor: Optional[Any] = None  # ← 允许 null 或不传
+    cursor: Optional[Any] = None
 
 class RewriteRequest(BaseModel):
-    sentence: str  # 用户选中的句子
+    sentence: str
+
+class LogicAnalysisRequest(BaseModel):
+    text: str
+
+def parse_json_response(result: str, default_key: str = "data"):
+    """Parse JSON response with error handling."""
+    try:
+        return json.loads(result)
+    except json.JSONDecodeError:
+        return {default_key: []}
 
 @app.post("/suggest")
 async def get_suggestions(request: SuggestionRequest):
-    raw_result = generate_suggestions(request.text, request.cursor)
-    try:
-        parsed = json.loads(raw_result)
-        return {"suggestions": parsed.get("suggestions", [])}
-    except:
-        return {"suggestions": []}
+    result = generate_suggestions(request.text, request.cursor)
+    parsed = parse_json_response(result, "suggestions")
+    return {"suggestions": parsed.get("suggestions", [])}
 
 @app.post("/rewrite")
 async def rewrite_sentence_endpoint(request: RewriteRequest):
-    # 调用 rewrite_service 进行句子改写
     result = rewrite_sentence(request.sentence)
+    return parse_json_response(result)
 
-    # 返回 JSON 格式的结果
-    return json.loads(result)  # 解析 JSON 字符串并返回
+@app.post("/analyze-logic")
+async def analyze_logic_endpoint(request: LogicAnalysisRequest):
+    """
+    Logic analysis endpoint.
+    Receives complete article content, uses GPT-4o to analyze logical flaws and provide improvement suggestions.
+    """
+    result = analyze_logic(request.text)
+    return parse_json_response(result)
