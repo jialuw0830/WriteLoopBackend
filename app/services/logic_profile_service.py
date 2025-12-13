@@ -1,4 +1,5 @@
 from app.services.llm_client import client
+from app.data.writing_corpus import get_ielts_essays
 import json
 import os
 
@@ -45,6 +46,30 @@ def analyze_logic_with_profile(text: str) -> str:
 
     existing_profile = _load_user_profile()
     existing_profile_json = json.dumps(existing_profile, ensure_ascii=False)
+    
+    # Load IELTS reference essays for comparison and examples
+    ielts_essays = get_ielts_essays()
+    # Select 5-7 relevant essays as reference (provide more examples for better matching)
+    reference_essays = ielts_essays[:7] if len(ielts_essays) >= 7 else ielts_essays
+    reference_text = ""
+    if reference_essays:
+        reference_text = "\n\n=== Reference: High-scoring IELTS Model Essays (use these as examples when analyzing) ===\n"
+        reference_text += "When you identify a problem in the student's article, you MUST cite a specific example from these essays showing the CORRECT approach.\n\n"
+        for i, essay in enumerate(reference_essays, 1):
+            reference_text += f"\n【Essay {i}】{essay.get('title', 'Untitled')}\n"
+            reference_text += f"Question: {essay.get('question', '')}\n"
+            # Show full paragraphs for better reference (truncate only if very long)
+            body_paragraphs = essay.get('body_paragraphs', [])
+            if body_paragraphs:
+                reference_text += "Body paragraphs:\n"
+                for j, para in enumerate(body_paragraphs, 1):
+                    # Show up to 300 chars per paragraph for better context
+                    if len(para) > 300:
+                        para_preview = para[:300] + "..."
+                    else:
+                        para_preview = para
+                    reference_text += f"  Para {j}: {para_preview}\n"
+            reference_text += "\n"
 
     prompt = f"""You are a professional academic writing and logic analysis expert and learning coach.
 Please carefully analyze the logical structure and language of the following ENGLISH article, 
@@ -55,6 +80,7 @@ identify logical flaws, argumentative weaknesses, vocabulary/grammar issues, and
 
 === Existing student profile (may be empty on first use) ===
 {existing_profile_json}
+{reference_text}
 
 Please do THREE things:
 
@@ -65,6 +91,8 @@ Analyze from the following aspects:
 - Causality: whether causal relationships are reasonable, and whether there are reversed or false causalities
 - Evidence Support: whether evidence sufficiently supports the thesis, and whether there is insufficient or irrelevant evidence
 - Logical Fallacies: whether there are logical jumps, circular reasoning, hasty generalizations, and other common logical errors
+
+CRITICAL: For EACH identified issue, you MUST provide a concrete example from the IELTS reference essays above that demonstrates the CORRECT way to handle that aspect. This helps the student understand how to improve by seeing real high-scoring examples.
 
 2) USER PROFILE (multi-dimensional, cumulative, CONCRETE)
 Based on THIS article and the EXISTING profile, update a concise but SPECIFIC student writing profile from multiple dimensions:
@@ -84,7 +112,8 @@ Return a STRICT JSON object in this format:
       "type": "Type of logical flaw",
       "location": "Location of the problem (paragraph/sentence description)",
       "description": "Detailed description of the problem",
-      "severity": "high"  // or "medium" or "low"
+      "severity": "high",  // or "medium" or "low"
+      "example_from_ielts": "A concrete example from the IELTS reference essays showing how this aspect is handled CORRECTLY. Include the essay title and the relevant sentence/paragraph excerpt."
     }}
   ],
   "summary": "Overall logic analysis summary (2–4 sentences).",
@@ -102,6 +131,11 @@ Return a STRICT JSON object in this format:
 
 IMPORTANT RULES:
 - Return EXACTLY 3 items in the "issues" array: select the 3 most critical and representative logical flaws.
+- For EACH issue, the "example_from_ielts" field MUST contain a real example from the reference essays above. 
+  Format: "From [Essay X: Essay Title]: [完整的相关句子或段落，展示正确的处理方式]"
+  Example: "From Essay 1: The Purpose of Science: 'In the most obvious sense, science improves lives when it targets urgent human needs. Medical research has reduced suffering through vaccines, antibiotics and safer surgery, while public health science has delivered clean water and better sanitation.'"
+- The example should directly demonstrate how to CORRECTLY handle the aspect that the student's article failed at.
+- If you cannot find a perfect match, choose the closest relevant example and briefly explain why it's relevant.
 - Do NOT include any field named "suggestions" or "tasks" in the response.
 - The JSON must be valid and must NOT contain markdown code blocks or comments."""
 

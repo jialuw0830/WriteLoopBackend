@@ -63,14 +63,14 @@ pip install -r requirements.txt
 进入项目根目录：
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
 启动成功后，你会看到：
 
 ```
-Uvicorn running on http://127.0.0.1:8000
-WebSocket server ready at ws://localhost:8000/ws/suggest
+Uvicorn running on http://127.0.0.1:8001
+WebSocket server ready at ws://localhost:8001/ws/suggest
 ```
 
 ---
@@ -80,7 +80,7 @@ WebSocket server ready at ws://localhost:8000/ws/suggest
 前端会与后端建立 WebSocket 连接：
 
 ```
-ws://localhost:8000/ws/suggest
+ws://localhost:8001/ws/suggest
 ```
 
 ### 前端发送的数据（JSON 格式）：
