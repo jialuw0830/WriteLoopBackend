@@ -82,20 +82,32 @@ def get_writing_corpus():
     return WRITING_CORPUS + ielts_phrases
 
 
+# Cache for IELTS essays to avoid repeated file reads
+_ielts_essays_cache = None
+
 def get_ielts_essays():
-    """Get full IELTS essays for reference in logic analysis."""
+    """Get full IELTS essays for reference in logic analysis. Uses caching for performance."""
+    global _ielts_essays_cache
+    
+    # Return cached data if available
+    if _ielts_essays_cache is not None:
+        return _ielts_essays_cache
+    
     ielts_file = os.path.join(
         os.path.dirname(__file__),
         "IELTS_data.json"
     )
     
     if not os.path.exists(ielts_file):
+        _ielts_essays_cache = []
         return []
     
     try:
         with open(ielts_file, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data.get("essays", [])
+        _ielts_essays_cache = data.get("essays", [])
+        return _ielts_essays_cache
     except Exception as e:
         print(f"Failed to load IELTS essays: {e}")
+        _ielts_essays_cache = []
         return []

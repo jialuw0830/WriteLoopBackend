@@ -4,7 +4,7 @@ from app.services.llm_client import client
 from app.services.rag_retriever import retrieve_similar_continuations
 
 
-def generate_suggestions(text: str, cursor: dict) -> str:
+def generate_suggestions(text: str, cursor: dict, read_essay_ids: list = None) -> str:
     """
     Generate 3 high-quality, academically appropriate ENGLISH PHRASES 
     that can naturally follow the user's current text.
@@ -18,8 +18,8 @@ def generate_suggestions(text: str, cursor: dict) -> str:
     # Use last 100 characters as context to avoid token overflow
     context = text[-100:].strip()
 
-    # Retrieve relevant examples from student's "reading history" (mocked)
-    retrieved_examples = retrieve_similar_continuations(context, top_k=3)
+    # Retrieve relevant examples based on reading history for RAG enhancement
+    retrieved_examples = retrieve_similar_continuations(context, top_k=3, read_essay_ids=read_essay_ids)
 
     # Build strong-constraint prompt
     prompt = f"""
