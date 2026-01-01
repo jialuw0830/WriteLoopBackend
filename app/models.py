@@ -63,6 +63,19 @@ class UserProfile(Base):
     user = relationship("User", back_populates="profile")
 
 
+class Essay(Base):
+    __tablename__ = "essays"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    essay_number = Column(Integer, unique=True, index=True, nullable=False)
+    title = Column(String(255), nullable=True)
+    question = Column(Text, nullable=True)
+    word_count_reported = Column(Integer, nullable=True)
+    word_count_actual = Column(Integer, nullable=True)
+    body_paragraphs = Column(Text, nullable=True)  # JSON list
+    body_text = Column(Text, nullable=True)
+
+
 # 创建数据库表
 def init_db():
     Base.metadata.create_all(bind=engine)

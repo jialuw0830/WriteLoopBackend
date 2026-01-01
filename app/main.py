@@ -8,9 +8,9 @@ from app.services.logic_profile_service import (
     analyze_logic_breaks,
     generate_tasks_for_profile,
 )
-from app.services.essay_service import get_all_essays, get_essay_by_id
+from app.services.essay_service import get_all_essays, get_essay_by_id, seed_essays_if_empty
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import init_db, get_db, User, UserProfile
+from app.models import init_db, get_db, User, UserProfile, SessionLocal
 from app.auth import (
     authenticate_user, get_password_hash, create_access_token,
     get_user_by_username, get_current_user
@@ -24,6 +24,14 @@ app = FastAPI()
 
 # 初始化数据库
 init_db()
+
+@app.on_event("startup")
+def seed_data_on_startup():
+    db = SessionLocal()
+    try:
+        seed_essays_if_empty(db)
+    finally:
+        db.close()
 
 # CORS configuration
 origins = [
@@ -152,16 +160,17 @@ async def generate_tasks_endpoint(
 async def get_essays(
     brief: bool = Query(False, description="Return lightweight summaries only."),
     preview_len: int = Query(200, ge=0, le=1000, description="Preview length for brief mode."),
+    db: Session = Depends(get_db),
 ):
     """Get all IELTS essays."""
-    essays = get_all_essays(brief=brief, preview_len=preview_len)
+    essays = get_all_essays(db, brief=brief, preview_len=preview_len)
     return {"essays": essays, "total": len(essays)}
 
 
 @app.get("/essays/{essay_id}")
-async def get_essay(essay_id: int):
+async def get_essay(essay_id: int, db: Session = Depends(get_db)):
     """Get a specific essay by ID."""
-    essay = get_essay_by_id(essay_id)
+    essay = get_essay_by_id(db, essay_id)
     if essay is None:
         raise HTTPException(status_code=404, detail="Essay not found")
     return {"essay": essay}

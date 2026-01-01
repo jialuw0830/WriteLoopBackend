@@ -5,7 +5,7 @@ Each entry is a natural phrase that commonly follows certain contexts.
 Now enhanced with IELTS real exam data.
 """
 import json
-import os
+from app.models import SessionLocal, Essay
 
 WRITING_CORPUS = [
     # Technology
@@ -42,38 +42,25 @@ WRITING_CORPUS = [
 
 
 def _load_ielts_data():
-    """Load IELTS real exam essays and extract sentence fragments."""
-    ielts_file = os.path.join(
-        os.path.dirname(__file__),
-        "IELTS_data.json"
-    )
-    
-    if not os.path.exists(ielts_file):
-        return []
-    
+    """Load IELTS real exam essays from DB and extract sentence fragments."""
+    db = SessionLocal()
     try:
-        with open(ielts_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
+        essays = db.query(Essay).order_by(Essay.essay_number.asc()).all()
         phrases = []
-        essays = data.get("essays", [])
-        
         for essay in essays:
-            # Extract sentences from body paragraphs
-            body_text = essay.get("body_text", "")
+            body_text = essay.body_text or ""
             if body_text:
-                # Split by sentences (simple approach: split by period followed by space)
                 sentences = [s.strip() for s in body_text.split(". ") if s.strip()]
-                # Take meaningful sentence fragments (8-30 words)
                 for sentence in sentences:
                     words = sentence.split()
                     if 8 <= len(words) <= 30:
                         phrases.append(sentence)
-        
         return phrases
     except Exception as e:
-        print(f"Failed to load IELTS data: {e}")
+        print(f"Failed to load IELTS data from DB: {e}")
         return []
+    finally:
+        db.close()
 
 
 # Cache for combined writing corpus to avoid repeated file reads
@@ -103,21 +90,33 @@ def get_ielts_essays():
     if _ielts_essays_cache is not None:
         return _ielts_essays_cache
     
-    ielts_file = os.path.join(
-        os.path.dirname(__file__),
-        "IELTS_data.json"
-    )
-    
-    if not os.path.exists(ielts_file):
-        _ielts_essays_cache = []
-        return []
-    
+    db = SessionLocal()
     try:
-        with open(ielts_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        _ielts_essays_cache = data.get("essays", [])
+        essays = db.query(Essay).order_by(Essay.essay_number.asc()).all()
+        results = []
+        for essay in essays:
+            body_paragraphs = []
+            if essay.body_paragraphs:
+                try:
+                    body_paragraphs = json.loads(essay.body_paragraphs)
+                except json.JSONDecodeError:
+                    body_paragraphs = []
+            results.append(
+                {
+                    "essay_number": essay.essay_number,
+                    "title": essay.title,
+                    "question": essay.question,
+                    "word_count_reported": essay.word_count_reported,
+                    "word_count_actual": essay.word_count_actual,
+                    "body_paragraphs": body_paragraphs,
+                    "body_text": essay.body_text or "",
+                }
+            )
+        _ielts_essays_cache = results
         return _ielts_essays_cache
     except Exception as e:
-        print(f"Failed to load IELTS essays: {e}")
+        print(f"Failed to load IELTS essays from DB: {e}")
         _ielts_essays_cache = []
         return []
+    finally:
+        db.close()
