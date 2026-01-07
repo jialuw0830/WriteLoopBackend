@@ -346,3 +346,99 @@ IMPORTANT:
         return json.dumps({
             "tasks": []
         })
+
+
+def generate_logic_tree(text: str) -> str:
+    """
+    Generate a logic tree structure from the given text.
+    Analyzes the logical structure: thesis, main points, evidence, relationships, conclusion.
+    """
+    if not text.strip():
+        return json.dumps({
+            "error": "Empty content",
+            "tree": None,
+        })
+
+    prompt = f"""You are a professional academic writing and logic analysis expert.
+Please analyze the following article and extract its logical structure as a logic tree.
+
+=== Article content ===
+{text}
+
+Analyze the article's logical structure and extract:
+1. Thesis: The main argument or central claim
+2. Main Points: Key supporting arguments (usually 2-4 points)
+   - For each main point, identify the supporting evidence
+3. Logical Relationships: How different points connect (e.g., "causes", "supports", "contrasts with")
+4. Conclusion: The concluding statement or summary
+
+Return a STRICT JSON object in this format:
+{{
+  "tree": {{
+    "thesis": "The main thesis or central argument of the article",
+    "mainPoints": [
+      {{
+        "text": "First main supporting point",
+        "evidence": ["Evidence 1", "Evidence 2"]
+      }},
+      {{
+        "text": "Second main supporting point",
+        "evidence": ["Evidence 1", "Evidence 2"]
+      }}
+    ],
+    "relationships": [
+      {{
+        "type": "causes" | "supports" | "contrasts with" | "leads to" | etc.,
+        "from": "Source point or argument",
+        "to": "Target point or argument"
+      }}
+    ],
+    "conclusion": "The conclusion or summary statement"
+  }}
+}}
+
+IMPORTANT RULES:
+- Extract REAL information from the article, don't invent content
+- ALL text content (thesis, mainPoints, evidence, relationships, conclusion) MUST be in ENGLISH
+- If the original article is in another language, translate and summarize the logical structure in English
+- If a field cannot be identified, use null or omit it
+- The JSON must be valid and must NOT contain markdown code blocks or comments
+- Limit mainPoints to 2-5 items, relationships to 1-8 items
+- Relationship types should be concise English verbs or phrases (e.g., "causes", "supports", "contradicts", "leads to")
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a professional academic writing and logic analysis expert. "
+                        "You ALWAYS return a single JSON object following the requested schema."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+            max_completion_tokens=2000,
+        )
+
+        result = completion.choices[0].message.content.strip()
+
+        try:
+            data = json.loads(result)
+            return json.dumps(data, ensure_ascii=False)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+            return json.dumps({
+                "error": "Server response format error",
+                "tree": None,
+            })
+
+    except Exception as e:
+        print(f"Logic tree generation error: {e}")
+        return json.dumps({
+            "error": str(e),
+            "tree": None,
+        })

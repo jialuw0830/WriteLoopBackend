@@ -7,6 +7,7 @@ from app.services.logic_profile_service import (
     analyze_logic_with_profile,
     analyze_logic_breaks,
     generate_tasks_for_profile,
+    generate_logic_tree,
 )
 from app.services.essay_service import get_all_essays, get_essay_by_id, seed_essays_if_empty
 from fastapi.middleware.cors import CORSMiddleware
@@ -153,6 +154,19 @@ async def generate_tasks_endpoint(
     result = generate_tasks_for_profile(request.text, user_id=current_user.id, db=db)
     # this already returns {"tasks": [...]}
     return parse_json_response(result, default_key="tasks")
+
+
+@app.post("/analyze-logic-tree")
+async def analyze_logic_tree_endpoint(
+    request: LogicAnalysisRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generate a logic tree structure from the user's text.
+    Shows thesis, main points, evidence, relationships, and conclusion.
+    """
+    result = generate_logic_tree(request.text)
+    return parse_json_response(result, default_key="tree")
 
 
 # IELTS Essay Reading APIs
