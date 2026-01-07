@@ -10,7 +10,7 @@ from app.services.logic_profile_service import (
 )
 from app.services.essay_service import get_all_essays, get_essay_by_id, seed_essays_if_empty
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import init_db, get_db, User, UserProfile, SessionLocal
+from app.models import init_db, get_db, User, UserProfile, PracticeHistory, SessionLocal
 from app.auth import (
     authenticate_user, get_password_hash, create_access_token,
     get_user_by_username, get_current_user
@@ -270,6 +270,38 @@ async def get_user_profile(
         "profile_data": profile_data,
         "has_data": True,
         "updated_at": profile.updated_at.isoformat() if profile.updated_at else None
+    }
+
+
+@app.get("/practice-history")
+async def get_practice_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=1000, description="返回的最大记录数")
+):
+    """获取用户的练习历史记录，用于绘制趋势折线图"""
+    history_records = db.query(PracticeHistory)\
+        .filter(PracticeHistory.user_id == current_user.id)\
+        .order_by(PracticeHistory.created_at.asc())\
+        .limit(limit)\
+        .all()
+    
+    # 转换为前端需要的格式
+    history_data = []
+    for record in history_records:
+        history_data.append({
+            "id": record.id,
+            "logic_score": record.logic_score,
+            "ttr": record.ttr,
+            "mlu": record.mlu,
+            "created_at": record.created_at.isoformat() if record.created_at else None,
+            # 计算综合分数（可选，用于折线图）
+            "overall_score": (record.logic_score + record.ttr + record.mlu) / 3.0
+        })
+    
+    return {
+        "history": history_data,
+        "total": len(history_data)
     }
 
 

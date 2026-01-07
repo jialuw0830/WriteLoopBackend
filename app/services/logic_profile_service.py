@@ -1,7 +1,7 @@
 from app.services.llm_client import client, OPENAI_MODEL
 from app.data.writing_corpus import get_ielts_essays
 from app.services.text_metrics import calculate_ttr, calculate_mlu
-from app.models import get_db, UserProfile, init_db
+from app.models import get_db, UserProfile, PracticeHistory, init_db
 from sqlalchemy.orm import Session
 from typing import List
 import json
@@ -21,7 +21,7 @@ def _load_user_profile(user_id: int, db: Session) -> dict:
 
 
 def _save_user_profile(user_id: int, profile_data: dict, logic_score: float, text: str, db: Session) -> None:
-    """Save user profile to database with metrics."""
+    """Save user profile to database with metrics and practice history."""
     try:
         # 计算 TTR 和 MLU
         ttr_score = calculate_ttr(text)
@@ -46,6 +46,15 @@ def _save_user_profile(user_id: int, profile_data: dict, logic_score: float, tex
                 logic_score=logic_score
             )
             db.add(profile)
+        
+        # 保存练习历史记录
+        history = PracticeHistory(
+            user_id=user_id,
+            logic_score=logic_score,
+            ttr=ttr_score,
+            mlu=mlu_score
+        )
+        db.add(history)
         
         db.commit()
     except Exception as e:

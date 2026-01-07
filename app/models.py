@@ -40,6 +40,7 @@ class User(Base):
     
     # 关联关系
     profile = relationship("UserProfile", back_populates="user", uselist=False)
+    practice_history = relationship("PracticeHistory", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserProfile(Base):
@@ -61,6 +62,24 @@ class UserProfile(Base):
     
     # 关联关系
     user = relationship("User", back_populates="profile")
+
+
+class PracticeHistory(Base):
+    __tablename__ = "practice_history"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # 每次练习的分数（0-100 分）
+    logic_score = Column(Float, nullable=False, comment="Logic Score: 逻辑连贯性 (0-100)")
+    ttr = Column(Float, nullable=False, comment="Type-Token Ratio: 词汇丰富度 (0-100)")
+    mlu = Column(Float, nullable=False, comment="Mean Length of Utterance: 句法复杂度 (0-100)")
+    
+    # 时间戳
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    # 关联关系
+    user = relationship("User", back_populates="practice_history")
 
 
 class Essay(Base):
